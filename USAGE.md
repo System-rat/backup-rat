@@ -4,7 +4,7 @@ This document explains the usage of the backup-rat binary
 # Installation
 Requires a standard Rust installation (If you dont have it get it [here](https://rustup.rs/))
 ## Using crates.io
-    $ cargo install backup-rat
+    $ cargo install backup_rat
 
 ## Using git
 - Clone the project 
