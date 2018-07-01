@@ -1,12 +1,12 @@
 [package]
 name = "backup_rat"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["System.rat"]
 description = "A highly configurable backup tool"
 documentation = "https://github.com/System-rat/backup-rat"
 homepage = "https://github.com/System-rat/backup-rat"
 repository = "https://github.com/System-rat/backup-rat"
-readme = "README.md"
+readme = "USAGE.md"
 keywords = [
     "backup",
     "files",
