@@ -7,11 +7,14 @@ Requires a standard Rust installation (If you dont have it get it [here](https:/
     $ cargo install backup_rat
 
 ## Using git
-- Clone the project 
+Clone the project 
+
     $ git clone "https://github.com/System-rat/backup-rat.git"
-- Enter the directory
+Enter the directory
+
     $ cd backup-rat
-- Install from the source
+Install from the source
+
     $ cargo install
 
 
@@ -76,11 +79,11 @@ tag = "Config"
 
 # The path to the file or folder to backup
 # Added: 0.1.0
-path = "/env" 
+path = "/etc" 
 
-# The destination of the backup
+# The destination of the backup (in this example the /etc folder will be in /mnt/Backup/etc)
 # Added: 0.1.0
-target_path = "/mnt/Backup/Config" 
+target_path = "/mnt/Backup" 
 
 # Optional: If set to true the target will NOT be backed up by the *all* target
 # Added: 0.1.0

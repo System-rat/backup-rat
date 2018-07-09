@@ -1,6 +1,6 @@
 [package]
 name = "backup_rat"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["System.rat"]
 description = "A highly configurable backup tool"
 documentation = "https://github.com/System-rat/backup-rat"
@@ -17,7 +17,6 @@ categories = [
     "command-line-utilities",
     "filesystem"
 ]
-license = "MPL-2.0"
 license-file = "LICENSE.txt"
 
 [[bin]]

@@ -14,7 +14,7 @@ use clap::{App, Arg};
 fn main() {
     // Reads the command-line arguments using clap
     let options = App::new("backup-rat")
-        .version("0.1.2")
+        .version("0.1.3")
         .author("System.rat <system.rodent@gmail.com>")
         .about("A versatile backup program")
         .arg(
@@ -39,7 +39,7 @@ fn main() {
      "
     );
 
-    let mut did_backup = false;
+    let mut has_targets = false;
     let config = load_config(get_config_folder().join("config.toml"));
 
     // The all target has been invoked
@@ -48,19 +48,19 @@ fn main() {
             if target.optional {
                 continue;
             };
+            has_targets = true;
             print!("Backing up target: ");
             if let Some(tag) = &target.tag {
-                print!("{}", tag);
+                print!("{}... ", tag);
             } else {
-                print!("{}", &target.path.display());
+                print!("{}... ", &target.path.display());
             }
             flush();
             let res = copy_to_target(&target);
-            if res.is_err() {
-                println!(" Error: {}", res.unwrap_err());
+            if let Ok(num) = res {
+                println!("Done: {} files copied.", num);
             } else {
-                println!("");
-                did_backup = true;
+                println!(" Error: {}", res.unwrap_err());
             }
         }
     // Another target has been invoked
@@ -68,20 +68,20 @@ fn main() {
         for target in config.targets {
             if let Some(tag) = &target.tag {
                 if tag == options.value_of("TARGET").unwrap() {
-                    print!("Backing up target: {}", tag);
+                    has_targets = true;
+                    print!("Backing up target: {}... ", tag);
                     flush();
                     let res = copy_to_target(&target);
-                    if res.is_err() {
-                        println!(" Error: {}", res.unwrap_err());
+                    if let Ok(num) = res {
+                        println!("Done: {} files copied.", num);
                     } else {
-                        println!("");
-                        did_backup = true;
+                        println!(" Error: {}", res.unwrap_err());
                     }
                 }
             }
         }
     }
-    if did_backup {
+    if has_targets {
         println!("\nDone.");
     } else {
         println!("No targets!");
@@ -95,7 +95,9 @@ fn flush() {
 // if only windows followed SOME *NIX standards
 #[cfg(target_os = "windows")]
 fn get_config_folder() -> PathBuf {
-    ::std::env::home_dir().unwrap().join("AppData/backup-rat")
+    ::std::env::home_dir()
+        .unwrap()
+        .join("AppData/Local/backup-rat")
 }
 
 #[cfg(not(target_os = "windows"))]
