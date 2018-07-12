@@ -1,6 +1,6 @@
 [package]
 name = "backup_rat"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["System.rat"]
 description = "A highly configurable backup tool"
 documentation = "https://github.com/System-rat/backup-rat"
@@ -42,3 +42,4 @@ clap = "2.31.2"
 toml = "0.4.6"
 serde = "1.0.66"
 serde_derive = "1.0.66"
+directories = "1.0.1"

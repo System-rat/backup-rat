@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 extern crate backup_rat;
 extern crate clap;
+extern crate directories;
 
 use std::io::prelude::*;
 use std::path::PathBuf;
@@ -10,11 +11,12 @@ use std::path::PathBuf;
 use backup_rat::config::load_config;
 use backup_rat::operation::copy_to_target;
 use clap::{App, Arg};
+use directories::ProjectDirs;
 
 fn main() {
-    // Reads the command-line arguments using clap
+    // Reads the command-line arguments using clap\
     let options = App::new("backup-rat")
-        .version("0.1.3")
+        .version("0.1.4")
         .author("System.rat <system.rodent@gmail.com>")
         .about("A versatile backup program")
         .arg(
@@ -92,15 +94,10 @@ fn flush() {
     std::io::stdout().flush().unwrap();
 }
 
-// if only windows followed SOME *NIX standards
-#[cfg(target_os = "windows")]
 fn get_config_folder() -> PathBuf {
-    ::std::env::home_dir()
-        .unwrap()
-        .join("AppData/Local/backup-rat")
-}
-
-#[cfg(not(target_os = "windows"))]
-fn get_config_folder() -> PathBuf {
-    ::std::env::home_dir().unwrap().join(".config/backup-rat")
+    if let Some(project_dirs) = ProjectDirs::from("com", "System.rat", "backup-rat") {
+        return PathBuf::from(project_dirs.config_dir());
+    } else {
+        return PathBuf::new();
+    }
 }
