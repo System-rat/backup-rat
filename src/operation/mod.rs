@@ -5,10 +5,13 @@
 //! Contains helper methods and structs for backup operations
 //! such as checking timestamps, copying to targets and restoring
 
-use std::fs::{copy, create_dir, read_dir};
+use std::fs::{copy, create_dir, create_dir_all, read_dir};
 use std::fs::{DirEntry, File, Metadata};
 use std::io::{Error, ErrorKind, Result};
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
+use std::sync::mpsc::channel;
+use std::thread::{JoinHandle, spawn};
 
 use super::config::BackupTarget;
 
@@ -44,8 +47,8 @@ pub fn size_of(path: &PathBuf) -> Result<u64> {
     Ok(sum)
 }
 
-/// Copies a or folder file to a destination
-/// Checking timestamps to override or not
+/// Copies a folder or file to a destination
+/// whilst also checking timestamps to override or not
 ///
 /// # Parameters
 /// - from: the file or folder to copy
@@ -122,9 +125,7 @@ pub fn copy_to(from: &PathBuf, to: &PathBuf, check_timestamp: bool) -> Result<i3
                 }
             } else {
                 if File::open(&entry.1).is_err() {
-                    if let Ok(_) = create_dir(&entry.1) {
-                        num += 1;
-                    }
+                    create_dir(&entry.1).is_ok();
                 }
                 if let Ok(dir_entries) = read_dir(entry.0.path()) {
                     for e in dir_entries {
@@ -138,6 +139,121 @@ pub fn copy_to(from: &PathBuf, to: &PathBuf, check_timestamp: bool) -> Result<i3
         }
     }
 
+    Ok(num)
+}
+
+enum Command {
+    Terminate,
+    Copy(PathBuf, PathBuf)
+}
+
+/// Copies a folder or file to a destination using multiple threads
+/// whilst also checking timestamps to override or not
+///
+/// # Parameters
+/// - from: the file or folder to copy
+/// - to: the parent dir of the *from* object
+/// - check_timestamp: wether to check file modification before copy
+/// or always copy
+///
+/// # Returns
+/// Returns an the number of copied files
+///
+/// # Error
+/// Returns an error if the target could not be written to or the *from* target could
+/// not be read
+///
+/// # Notes
+/// - If the target is a file it will use no threads
+pub fn threaded_copy_to(from: &PathBuf, to: &PathBuf, check_timestamp: bool, num_threads: i32) -> Result<i32> {
+    if let Ok(file) = File::open(from) {
+        if file.metadata().unwrap().is_file() {
+            copy(from, to.join(from.file_name().unwrap()))?;
+            return Ok(1);
+        }
+    }
+
+    if File::open(to).is_err() {
+        return Err(Error::new(
+            ErrorKind::NotFound,
+            "The destination is unavailable!",
+        ));
+    }
+    let (sender, receiver) = channel::<Command>();
+    let arc_receiver = Arc::new(Mutex::new(receiver));
+    let mut threads: Vec<JoinHandle<i32>> = Vec::new();
+    let mut num: i32 = 0;
+    for _ in 1..num_threads {
+        let receiver = Arc::clone(&arc_receiver);
+        threads.push(spawn(move || {
+            let mut num = 0;
+            loop {
+                let command = receiver.lock().unwrap().recv().unwrap();
+                if let Command::Terminate = command {
+                    break;
+                } else if let Command::Copy(from, to) = command {
+                    if create_dir_all(to.parent().unwrap()).is_ok() {
+                        if copy(from, to).is_ok() {
+                            num += 1;
+                        }
+                    }
+                }
+            }
+            num
+        }));
+    }
+    let mut read_files: Vec<(PathBuf, PathBuf)> = Vec::new();
+
+    if File::open(&to.join(from.file_name().unwrap())).is_err() {
+        create_dir(&to.join(from.file_name().unwrap()))?;
+    }
+
+    for dir_entry in read_dir(from)? {
+        if let Ok(dir_entry) = dir_entry {
+            read_files.push((dir_entry.path(), to.clone().join(from.file_name().unwrap())));
+        }
+    }
+
+    while !read_files.is_empty() {
+        let (file_path, file_parent) = read_files.pop().unwrap();
+        let file = File::open(&file_path);
+        if let Ok(file) = file {
+            let metadata = file.metadata().unwrap();
+            if metadata.is_dir() {
+                if let Ok(entries) = read_dir(&file_path) {
+                    for entry in entries {
+                        if let Ok(entry) = entry {
+                            if let Ok(f) = File::open(entry.path()) {
+                                if f.metadata().unwrap().is_dir() {
+                                    read_files.push((entry.path(), file_parent.join(file_path.file_name().unwrap())));
+                                } else {
+                                    read_files.push((entry.path(), file_parent.join(file_path.file_name().unwrap())));
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                if check_timestamp {
+                    let target_file_path = file_parent.clone().join(file_path.file_name().unwrap());
+                    if let Ok(target_file) = File::open(target_file_path) {
+                        if target_file.metadata().unwrap().modified().unwrap() > metadata.modified().unwrap() {
+                            continue;
+                        }
+                    }
+                }
+                sender.send( Command::Copy(file_path.clone(), file_parent.join(file_path.file_name().unwrap()))).is_ok();
+            }
+        }
+    }
+
+    for _ in 1..num_threads {
+        sender.send(Command::Terminate).is_ok();
+    }
+
+    for handle in threads {
+        num += handle.join().unwrap();
+    }
     Ok(num)
 }
 
@@ -155,7 +271,7 @@ pub fn copy_to(from: &PathBuf, to: &PathBuf, check_timestamp: bool) -> Result<i3
 ///
 /// # TODO
 /// - Actually use the keep_num variable of the target
-pub fn copy_to_target(target: &BackupTarget) -> Result<i32> {
+pub fn copy_to_target(target: &BackupTarget, threads: i32) -> Result<i32> {
     // checks
     if File::open(&target.target_path).is_err() {
         return Err(Error::new(
@@ -163,7 +279,14 @@ pub fn copy_to_target(target: &BackupTarget) -> Result<i32> {
             "The destination is unavailable!",
         ));
     }
-    let res = copy_to(&target.path, &target.target_path, !&target.always_copy)?;
+
+
+    let res;
+    if threads > 1 {
+        res = threaded_copy_to(&target.path, &target.target_path, !target.always_copy, threads)?;
+    } else {
+        res = copy_to(&target.path, &target.target_path, !target.always_copy)?;
+    }
     Ok(res)
 }
 

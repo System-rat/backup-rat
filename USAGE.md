@@ -48,12 +48,13 @@ All of the **Optional** variables are set to defaults in this example
 
 ```toml
 
-# NYI
+# Wether to use multi threading for copying or not
+# Added: 0.2.0
 multi_threaded = true 
 
-# NYI
-threads = 4 
-
+# The number of threads to use in multithreaded copying (defaults to the number of cores)
+# Added: 0.2.0
+threads = 2
 # NYI
 daemon_interval = 0 
 

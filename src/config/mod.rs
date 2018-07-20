@@ -51,7 +51,7 @@ impl Default for Config {
     fn default() -> Config {
         Config {
             multi_threaded: true,
-            threads: 4,
+            threads: ::num_cpus::get() as i32,
             targets: Vec::new(),
             daemon_interval: 0,
             color: false,
@@ -107,7 +107,7 @@ pub fn load_config(config_path: PathBuf) -> Config {
             }
             Config {
                 multi_threaded: raw_config.multi_threaded.unwrap_or(true),
-                threads: raw_config.threads.unwrap_or(4),
+                threads: raw_config.threads.unwrap_or(::num_cpus::get() as i32),
                 targets: targets,
                 daemon_interval: raw_config.daemon_interval.unwrap_or(0),
                 color: raw_config.color.unwrap_or(false),
@@ -162,7 +162,7 @@ mod config_tests {
         );
         let default = ::config::Config {
             multi_threaded: true,
-            threads: 4,
+            threads: ::num_cpus::get() as i32,
             targets: Vec::new(),
             daemon_interval: 0,
             color: false,
@@ -184,7 +184,7 @@ mod config_tests {
         );
         let default = ::config::Config {
             multi_threaded: true,
-            threads: 4,
+            threads: ::num_cpus::get() as i32,
             targets: vec![::config::BackupTarget {
                 path: ::std::path::PathBuf::from("test"),
                 target_path: ::std::path::PathBuf::from("test"),

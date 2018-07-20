@@ -4,6 +4,7 @@
 
 //! The library used by the backup-rat utility that contains
 //! all of the actual backup code
+extern crate num_cpus;
 extern crate regex;
 extern crate serde;
 #[macro_use]

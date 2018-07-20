@@ -58,7 +58,11 @@ fn main() {
                 print!("{}... ", &target.path.display());
             }
             flush();
-            let res = copy_to_target(&target);
+            let mut threads = 1;
+            if config.multi_threaded {
+                threads = config.threads;
+            }
+            let res = copy_to_target(&target, threads);
             if let Ok(num) = res {
                 println!("Done: {} files copied.", num);
             } else {
@@ -73,7 +77,11 @@ fn main() {
                     has_targets = true;
                     print!("Backing up target: {}... ", tag);
                     flush();
-                    let res = copy_to_target(&target);
+                    let mut threads = 1;
+                    if config.multi_threaded {
+                        threads = config.threads;
+                    }
+                    let res = copy_to_target(&target, threads);
                     if let Ok(num) = res {
                         println!("Done: {} files copied.", num);
                     } else {
