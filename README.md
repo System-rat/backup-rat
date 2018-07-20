@@ -20,7 +20,7 @@ will be implemented. When all of these are complete the project will officially
 reach version **1.0.0** and will be considered "stable".
 
 - [x] backing up modified files
-    - [ ] multi-threaded (configurable)
+    - [x] multi-threaded (configurable)
 
 
 - [x] multiple configurable backup targets
