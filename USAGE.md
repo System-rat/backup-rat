@@ -38,7 +38,8 @@ Thats it... (for now)
 
 # Configuration
 The config file is located at `$HOME/.config/backup-rat/config.toml` for *NIX systems
-or `%HOME%/AppData/backup-rat/config.toml` for Windows (thanks Microsoft) and uses the TOML
+or `%HOME%/AppData/Roaming/System.rat/backup-rat/config.toml` for Windows, 
+`$HOME/Library/Preferences/com.System.rat.backup-rat/config.toml` for OSX and uses the TOML
 syntax (basically .ini files)
 
 ## The config file structure
