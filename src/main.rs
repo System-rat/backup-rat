@@ -1,17 +1,25 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
-extern crate backup_rat;
 extern crate clap;
 extern crate directories;
+extern crate num_cpus;
+extern crate regex;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate toml;
+
+pub mod config;
+pub mod operation;
 
 use std::io::prelude::*;
 use std::path::PathBuf;
 
-use backup_rat::config::load_config;
-use backup_rat::operation::copy_to_target;
 use clap::{App, Arg};
+use config::load_config;
 use directories::ProjectDirs;
+use operation::copy_to_target;
 
 fn main() {
     // Reads the command-line arguments using clap\

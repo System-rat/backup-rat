@@ -22,11 +22,6 @@ license-file = "LICENSE.txt"
 [[bin]]
 name = "backup-rat"
 path = "src/main.rs"
-doc = false
-
-[lib]
-name = "backup_rat"
-path = "src/lib.rs"
 
 [profile.release]
 opt-level = 3
