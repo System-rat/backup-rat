@@ -4,6 +4,9 @@
 A small learning project created due to a need for a highly configurable
 backup program and a reason to not procrastinate.
 
+**Note:** the project development is slow due to other projects currently occupying
+my time and the fact that college (or university.. one of those) season is almost upon me.
+
 # License
 The project is licensed under the [MLP (Mozilla public license)](https://www.mozilla.org/en-US/MPL/2.0/).
 The license is included in the LICENSE.txt
