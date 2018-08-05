@@ -9,9 +9,9 @@ use std::fs::{copy, create_dir, create_dir_all, read_dir};
 use std::fs::{DirEntry, File, Metadata};
 use std::io::{Error, ErrorKind, Result};
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
 use std::sync::mpsc::channel;
-use std::thread::{JoinHandle, spawn};
+use std::sync::{Arc, Mutex};
+use std::thread::{spawn, JoinHandle};
 
 use super::config::BackupTarget;
 
@@ -144,7 +144,7 @@ pub fn copy_to(from: &PathBuf, to: &PathBuf, check_timestamp: bool) -> Result<i3
 
 enum Command {
     Terminate,
-    Copy(PathBuf, PathBuf)
+    Copy(PathBuf, PathBuf),
 }
 
 /// Copies a folder or file to a destination using multiple threads
@@ -165,7 +165,12 @@ enum Command {
 ///
 /// # Notes
 /// - If the target is a file it will use no threads
-pub fn threaded_copy_to(from: &PathBuf, to: &PathBuf, check_timestamp: bool, num_threads: i32) -> Result<i32> {
+pub fn threaded_copy_to(
+    from: &PathBuf,
+    to: &PathBuf,
+    check_timestamp: bool,
+    num_threads: i32,
+) -> Result<i32> {
     if let Ok(file) = File::open(from) {
         if file.metadata().unwrap().is_file() {
             copy(from, to.join(from.file_name().unwrap()))?;
@@ -225,9 +230,15 @@ pub fn threaded_copy_to(from: &PathBuf, to: &PathBuf, check_timestamp: bool, num
                         if let Ok(entry) = entry {
                             if let Ok(f) = File::open(entry.path()) {
                                 if f.metadata().unwrap().is_dir() {
-                                    read_files.push((entry.path(), file_parent.join(file_path.file_name().unwrap())));
+                                    read_files.push((
+                                        entry.path(),
+                                        file_parent.join(file_path.file_name().unwrap()),
+                                    ));
                                 } else {
-                                    read_files.push((entry.path(), file_parent.join(file_path.file_name().unwrap())));
+                                    read_files.push((
+                                        entry.path(),
+                                        file_parent.join(file_path.file_name().unwrap()),
+                                    ));
                                 }
                             }
                         }
@@ -237,12 +248,19 @@ pub fn threaded_copy_to(from: &PathBuf, to: &PathBuf, check_timestamp: bool, num
                 if check_timestamp {
                     let target_file_path = file_parent.clone().join(file_path.file_name().unwrap());
                     if let Ok(target_file) = File::open(target_file_path) {
-                        if target_file.metadata().unwrap().modified().unwrap() > metadata.modified().unwrap() {
+                        if target_file.metadata().unwrap().modified().unwrap()
+                            > metadata.modified().unwrap()
+                        {
                             continue;
                         }
                     }
                 }
-                sender.send( Command::Copy(file_path.clone(), file_parent.join(file_path.file_name().unwrap()))).is_ok();
+                sender
+                    .send(Command::Copy(
+                        file_path.clone(),
+                        file_parent.join(file_path.file_name().unwrap()),
+                    ))
+                    .is_ok();
             }
         }
     }
@@ -261,8 +279,10 @@ pub fn threaded_copy_to(from: &PathBuf, to: &PathBuf, check_timestamp: bool, num
 ///
 /// # Parameters
 /// - target: a reference to the target in question
+///
 /// # Returns
 /// the number of files copied (and folders created)
+///
 /// # Error
 /// Returns an error if:
 /// - the target is unavailable (ex. unmounted drive)
@@ -280,10 +300,14 @@ pub fn copy_to_target(target: &BackupTarget, threads: i32) -> Result<i32> {
         ));
     }
 
-
     let res;
     if threads > 1 {
-        res = threaded_copy_to(&target.path, &target.target_path, !target.always_copy, threads)?;
+        res = threaded_copy_to(
+            &target.path,
+            &target.target_path,
+            !target.always_copy,
+            threads,
+        )?;
     } else {
         res = copy_to(&target.path, &target.target_path, !target.always_copy)?;
     }
