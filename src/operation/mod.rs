@@ -66,25 +66,18 @@ pub fn copy_to(from: &PathBuf, to: &PathBuf, check_timestamp: bool) -> Result<i3
     let mut num: i32 = 0;
     let from_file: File = File::open(from)?;
 
-    // TODO: Fix this mess
     if from_file.metadata().unwrap().is_file() {
         if let Some(file_name) = from.file_name() {
             if let Ok(to_file) = File::open(to.join(file_name)) {
-                if check_timestamp {
-                    if from_file.metadata().unwrap().modified().unwrap()
-                        > to_file.metadata().unwrap().modified().unwrap()
-                    {
-                        num += 1;
-                        copy(from, to.join(file_name))?;
-                    }
-                } else {
-                    num += 1;
-                    copy(from, to.join(file_name))?;
+                if check_timestamp
+                    && from_file.metadata().unwrap().modified().unwrap()
+                        < to_file.metadata().unwrap().modified().unwrap()
+                {
+                    return Ok(0);
                 }
-            } else {
-                num += 1;
-                copy(from, to.join(file_name))?;
             }
+            num += 1;
+            copy(from, to.join(file_name))?;
         }
     } else {
         // the files and folders to be copied
@@ -112,15 +105,13 @@ pub fn copy_to(from: &PathBuf, to: &PathBuf, check_timestamp: bool) -> Result<i3
                     let copied_file = File::open(&entry.1);
                     if let Ok(copied_file) = copied_file {
                         if entry.0.metadata().unwrap().modified().unwrap()
-                            > copied_file.metadata().unwrap().modified().unwrap()
-                            && copy(entry.0.path(), &entry.1).is_ok()
+                            < copied_file.metadata().unwrap().modified().unwrap()
                         {
-                            num += 1;
+                            continue;
                         }
-                    } else if copy(entry.0.path(), &entry.1).is_ok() {
-                        num += 1;
                     }
-                } else if copy(entry.0.path(), &entry.1).is_ok() {
+                }
+                if copy(entry.0.path(), &entry.1).is_ok() {
                     num += 1;
                 }
             } else {
@@ -219,6 +210,7 @@ pub fn threaded_copy_to(
         }
     }
 
+    // WARNING: This code is confusing...
     while !read_files.is_empty() {
         let (file_path, file_parent) = read_files.pop().unwrap();
         let file = File::open(&file_path);
