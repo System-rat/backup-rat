@@ -14,16 +14,16 @@ use std::path::PathBuf;
 struct InnerConfig {
     pub multi_threaded: Option<bool>,
     pub threads: Option<i32>,
-    pub target: Option<Vec<InnerBacupTarget>>,
+    pub target: Option<Vec<InnerBackupTarget>>,
     pub daemon_interval: Option<i32>,
     pub color: Option<bool>,
     pub fancy_text: Option<bool>,
     pub verbose: Option<bool>,
-    pub runfile_folder: Option<PathBuf>,
+    pub runtime_folder: Option<PathBuf>,
 }
 
 #[derive(Deserialize)]
-struct InnerBacupTarget {
+struct InnerBackupTarget {
     pub tag: Option<String>,
     pub path: PathBuf,
     pub ignore_files: Option<Vec<String>>,
@@ -44,7 +44,7 @@ pub struct Config {
     pub color: bool,
     pub fancy_text: bool,
     pub verbose: bool,
-    pub runfile_folder: PathBuf,
+    pub runtime_folder: PathBuf,
 }
 
 impl Default for Config {
@@ -57,7 +57,7 @@ impl Default for Config {
             color: false,
             fancy_text: true,
             verbose: false,
-            runfile_folder: home_dir().expect("Can't find home dir").join(".backup_rat"),
+            runtime_folder: home_dir().expect("Can't find home dir").join(".backup_rat"),
         }
     }
 }
@@ -113,8 +113,8 @@ pub fn load_config(config_path: PathBuf) -> Config {
                 color: raw_config.color.unwrap_or(false),
                 fancy_text: raw_config.fancy_text.unwrap_or(true),
                 verbose: raw_config.verbose.unwrap_or(false),
-                runfile_folder: raw_config
-                    .runfile_folder
+                runtime_folder: raw_config
+                    .runtime_folder
                     .unwrap_or(home_dir().expect("Can't find home dir").join(".backup_rat")),
             }
         } else {
@@ -145,7 +145,7 @@ mod config_tests {
             color: true,
             fancy_text: true,
             verbose: true,
-            runfile_folder: ::std::env::home_dir()
+            runtime_folder: ::std::env::home_dir()
                 .expect("Can't find home dir")
                 .join(".backup_rat"),
         };
@@ -168,7 +168,7 @@ mod config_tests {
             color: false,
             fancy_text: true,
             verbose: false,
-            runfile_folder: ::std::env::home_dir()
+            runtime_folder: ::std::env::home_dir()
                 .expect("Can't find home dir")
                 .join(".backup_rat"),
         };
@@ -199,7 +199,7 @@ mod config_tests {
             color: false,
             fancy_text: true,
             verbose: false,
-            runfile_folder: ::std::env::home_dir()
+            runtime_folder: ::std::env::home_dir()
                 .expect("Can't find home dir")
                 .join(".backup_rat"),
         };

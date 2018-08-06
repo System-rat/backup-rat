@@ -13,6 +13,8 @@ use std::sync::mpsc::channel;
 use std::sync::{Arc, Mutex};
 use std::thread::{spawn, JoinHandle};
 
+use regex::Regex;
+
 use super::config::BackupTarget;
 
 /// Returns the size of the directory or file in bytes
@@ -47,6 +49,58 @@ pub fn size_of(path: &PathBuf) -> Result<u64> {
     Ok(sum)
 }
 
+/// Checks if a directory or file is ignored
+///
+/// # Parameters
+/// - path: The path (relative to the base directory) of the folder or file
+/// in question
+/// - ignored_files: The vector of files to be ignored (regexes are prefixed
+/// with a r#)
+/// - ignored_folders: same as `ignored_files` except for directories
+///
+/// # Returns
+/// if the file or folder is to be ignored
+pub fn ignored(
+    path: &PathBuf,
+    metadata: &Metadata,
+    ignored_files: &Vec<String>,
+    ignored_folders: &Vec<String>,
+) -> bool {
+    // TODO: implement
+    if metadata.is_file() {
+        for filter in ignored_files {
+            if filter.starts_with("r#") {
+                let r = Regex::new(&filter[2..]);
+                if let Ok(r) = r {
+                    if r.is_match(path.file_name().unwrap().to_str().unwrap()) {
+                        return true;
+                    }
+                }
+            } else {
+                if path.file_name().unwrap().to_str().unwrap() == filter {
+                    return true;
+                }
+            }
+        }
+    } else {
+        for filter in ignored_folders {
+            if filter.starts_with("r#") {
+                let r = Regex::new(&filter[2..]);
+                if let Ok(r) = r {
+                    if r.is_match(path.as_os_str().to_str().unwrap()) {
+                        return true;
+                    }
+                }
+            } else {
+                if path.as_os_str().to_str().unwrap() == filter {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
 /// Copies a folder or file to a destination
 /// whilst also checking timestamps to override or not
 ///
@@ -62,7 +116,14 @@ pub fn size_of(path: &PathBuf) -> Result<u64> {
 /// # Error
 /// Returns an error if the target could not be written to or the *from* target could
 /// not be read
-pub fn copy_to(from: &PathBuf, to: &PathBuf, check_timestamp: bool) -> Result<i32> {
+///
+/// TODO: implement `ignored` for directories
+pub fn copy_to(target: &BackupTarget) -> Result<i32> {
+    let from = &target.path;
+    let to = &target.target_path;
+    let check_timestamp = !target.always_copy;
+    let ignored_files = &target.ignore_files;
+    let ignored_folders = &target.ignore_folders;
     let mut num: i32 = 0;
     let from_file: File = File::open(from)?;
 
@@ -75,6 +136,14 @@ pub fn copy_to(from: &PathBuf, to: &PathBuf, check_timestamp: bool) -> Result<i3
                 {
                     return Ok(0);
                 }
+            }
+            if ignored(
+                from,
+                &from_file.metadata().unwrap(),
+                ignored_files,
+                ignored_folders,
+            ) {
+                return Ok(0);
             }
             num += 1;
             copy(from, to.join(file_name))?;
@@ -107,6 +176,9 @@ pub fn copy_to(from: &PathBuf, to: &PathBuf, check_timestamp: bool) -> Result<i3
                         if entry.0.metadata().unwrap().modified().unwrap()
                             < copied_file.metadata().unwrap().modified().unwrap()
                         {
+                            continue;
+                        }
+                        if ignored(&entry.0.path(), &info, &ignored_files, &ignored_folders) {
                             continue;
                         }
                     }
@@ -156,12 +228,14 @@ enum Command {
 ///
 /// # Notes
 /// - If the target is a file it will use no threads
-pub fn threaded_copy_to(
-    from: &PathBuf,
-    to: &PathBuf,
-    check_timestamp: bool,
-    num_threads: i32,
-) -> Result<i32> {
+///
+/// TODO: implement `ignored` for directories
+pub fn threaded_copy_to(target: &BackupTarget, num_threads: i32) -> Result<i32> {
+    let from = &target.path;
+    let to = &target.target_path;
+    let check_timestamp = !target.always_copy;
+    let ignored_files = &target.ignore_files;
+    let ignored_folders = &target.ignore_folders;
     if let Ok(file) = File::open(from) {
         if file.metadata().unwrap().is_file() {
             copy(from, to.join(from.file_name().unwrap()))?;
@@ -245,6 +319,14 @@ pub fn threaded_copy_to(
                         {
                             continue;
                         }
+                        if ignored(
+                            &file_path,
+                            &target_file.metadata().unwrap(),
+                            &ignored_files,
+                            &ignored_folders,
+                        ) {
+                            continue;
+                        }
                     }
                 }
                 sender
@@ -294,39 +376,9 @@ pub fn copy_to_target(target: &BackupTarget, threads: i32) -> Result<i32> {
 
     let res;
     if threads > 1 {
-        res = threaded_copy_to(
-            &target.path,
-            &target.target_path,
-            !target.always_copy,
-            threads,
-        )?;
+        res = threaded_copy_to(target, threads)?;
     } else {
-        res = copy_to(&target.path, &target.target_path, !target.always_copy)?;
+        res = copy_to(target)?;
     }
     Ok(res)
-}
-
-#[cfg(test)]
-mod operation_tests {
-    use std::fs::remove_dir_all;
-
-    #[test]
-    fn size_of() {
-        let path = ::std::env::current_dir()
-            .unwrap()
-            .join("test_resources/sub_folder");
-        assert_eq!(super::size_of(&path).unwrap(), 14);
-    }
-
-    #[test]
-    fn copy() {
-        let path = ::std::env::current_dir()
-            .unwrap()
-            .join("test_resources/sub_folder");
-        let target = ::std::env::current_dir().unwrap().join("test_resources/bk");
-        remove_dir_all(&target.join("sub_folder")).is_ok();
-        super::copy_to(&path, &target, false).unwrap();
-        assert_eq!(14, super::size_of(&path).unwrap());
-    }
-
 }
