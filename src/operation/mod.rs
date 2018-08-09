@@ -66,7 +66,6 @@ pub fn ignored(
     ignored_files: &Vec<String>,
     ignored_folders: &Vec<String>,
 ) -> bool {
-    // TODO: implement
     if metadata.is_file() {
         for filter in ignored_files {
             if filter.starts_with("r#") {
@@ -116,8 +115,6 @@ pub fn ignored(
 /// # Error
 /// Returns an error if the target could not be written to or the *from* target could
 /// not be read
-///
-/// TODO: implement `ignored` for directories
 pub fn copy_to(target: &BackupTarget) -> Result<i32> {
     let from = &target.path;
     let to = &target.target_path;
@@ -129,14 +126,6 @@ pub fn copy_to(target: &BackupTarget) -> Result<i32> {
 
     if from_file.metadata().unwrap().is_file() {
         if let Some(file_name) = from.file_name() {
-            if let Ok(to_file) = File::open(to.join(file_name)) {
-                if check_timestamp
-                    && from_file.metadata().unwrap().modified().unwrap()
-                        < to_file.metadata().unwrap().modified().unwrap()
-                {
-                    return Ok(0);
-                }
-            }
             if ignored(
                 from,
                 &from_file.metadata().unwrap(),
@@ -144,6 +133,14 @@ pub fn copy_to(target: &BackupTarget) -> Result<i32> {
                 ignored_folders,
             ) {
                 return Ok(0);
+            }
+            if let Ok(to_file) = File::open(to.join(file_name)) {
+                if check_timestamp
+                    && from_file.metadata().unwrap().modified().unwrap()
+                        < to_file.metadata().unwrap().modified().unwrap()
+                {
+                    return Ok(0);
+                }
             }
             num += 1;
             copy(from, to.join(file_name))?;
@@ -170,6 +167,9 @@ pub fn copy_to(target: &BackupTarget) -> Result<i32> {
             let entry = copy_queue.pop().unwrap();
             let info: Metadata = entry.0.metadata().unwrap();
             if info.is_file() {
+                if ignored(&entry.0.path(), &info, &ignored_files, &ignored_folders) {
+                    continue;
+                }
                 if check_timestamp {
                     let copied_file = File::open(&entry.1);
                     if let Ok(copied_file) = copied_file {
@@ -178,15 +178,24 @@ pub fn copy_to(target: &BackupTarget) -> Result<i32> {
                         {
                             continue;
                         }
-                        if ignored(&entry.0.path(), &info, &ignored_files, &ignored_folders) {
-                            continue;
-                        }
                     }
                 }
                 if copy(entry.0.path(), &entry.1).is_ok() {
                     num += 1;
                 }
             } else {
+                let entry_path = entry.0.path();
+                let striped_path = entry_path.strip_prefix(from);
+                if let Ok(striped_path) = striped_path {
+                    if ignored(
+                        &striped_path.to_path_buf(),
+                        &info,
+                        ignored_files,
+                        ignored_folders,
+                    ) {
+                        continue;
+                    }
+                }
                 if File::open(&entry.1).is_err() {
                     create_dir(&entry.1).is_ok();
                 }
@@ -228,8 +237,6 @@ enum Command {
 ///
 /// # Notes
 /// - If the target is a file it will use no threads
-///
-/// TODO: implement `ignored` for directories
 pub fn threaded_copy_to(target: &BackupTarget, num_threads: i32) -> Result<i32> {
     let from = &target.path;
     let to = &target.target_path;
@@ -291,6 +298,17 @@ pub fn threaded_copy_to(target: &BackupTarget, num_threads: i32) -> Result<i32> 
         if let Ok(file) = file {
             let metadata = file.metadata().unwrap();
             if metadata.is_dir() {
+                let striped_path = file_path.strip_prefix(from);
+                if let Ok(striped_path) = striped_path {
+                    if ignored(
+                        &striped_path.to_path_buf(),
+                        &metadata,
+                        ignored_files,
+                        ignored_folders,
+                    ) {
+                        continue;
+                    }
+                }
                 if let Ok(entries) = read_dir(&file_path) {
                     for entry in entries {
                         if let Ok(entry) = entry {
@@ -313,18 +331,13 @@ pub fn threaded_copy_to(target: &BackupTarget, num_threads: i32) -> Result<i32> 
             } else {
                 if check_timestamp {
                     let target_file_path = file_parent.clone().join(file_path.file_name().unwrap());
+                    if ignored(&file_path, &metadata, &ignored_files, &ignored_folders) {
+                        continue;
+                    }
                     if let Ok(target_file) = File::open(target_file_path) {
                         if target_file.metadata().unwrap().modified().unwrap()
                             > metadata.modified().unwrap()
                         {
-                            continue;
-                        }
-                        if ignored(
-                            &file_path,
-                            &target_file.metadata().unwrap(),
-                            &ignored_files,
-                            &ignored_folders,
-                        ) {
                             continue;
                         }
                     }
