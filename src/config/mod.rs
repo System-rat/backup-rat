@@ -25,6 +25,7 @@ struct InnerConfig {
 #[derive(Deserialize)]
 struct InnerBackupTarget {
     pub tag: Option<String>,
+    pub multi_threaded: Option<bool>,
     pub path: PathBuf,
     pub ignore_files: Option<Vec<String>>,
     pub ignore_folders: Option<Vec<String>>,
@@ -67,6 +68,7 @@ impl Default for Config {
 #[derive(Debug, PartialEq)]
 pub struct BackupTarget {
     pub tag: Option<String>,
+    pub multi_threaded: Option<bool>,
     pub path: PathBuf,
     pub ignore_files: Vec<String>,
     pub ignore_folders: Vec<String>,
@@ -95,6 +97,7 @@ pub fn load_config(config_path: PathBuf) -> Config {
                 for target in raw_targets {
                     targets.push(BackupTarget {
                         tag: target.tag,
+                        multi_threaded: target.multi_threaded,
                         path: target.path,
                         ignore_files: target.ignore_files.unwrap_or(Vec::new()),
                         ignore_folders: target.ignore_folders.unwrap_or(Vec::new()),

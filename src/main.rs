@@ -24,7 +24,7 @@ use operation::copy_to_target;
 fn main() {
     // Reads the command-line arguments using clap
     let options = App::new("backup-rat")
-        .version("0.3.0")
+        .version("0.3.1")
         .author("System.rat <system.rodent@gmail.com>")
         .about("A versatile backup program")
         .arg(
@@ -70,6 +70,14 @@ fn main() {
             if config.multi_threaded {
                 threads = config.threads;
             }
+            // Per-target override
+            if let Some(threaded) = target.multi_threaded {
+                if threaded {
+                    threads = config.threads;
+                } else {
+                    threads = 1;
+                }
+            }
             let res = copy_to_target(&target, threads);
             if let Ok(num) = res {
                 println!("Done: {} files copied.", num);
@@ -88,6 +96,14 @@ fn main() {
                     let mut threads = 1;
                     if config.multi_threaded {
                         threads = config.threads;
+                    }
+                    // Per-target override
+                    if let Some(threaded) = target.multi_threaded {
+                        if threaded {
+                            threads = config.threads;
+                        } else {
+                            threads = 1;
+                        }
                     }
                     let res = copy_to_target(&target, threads);
                     if let Ok(num) = res {

@@ -53,7 +53,7 @@ All of the **Optional** variables are set to defaults in this example
 # Added: 0.2.0
 multi_threaded = true 
 
-# The number of threads to use in multithreaded copying (defaults to the number of cores)
+# The number of threads to use in multi threaded copying (defaults to the number of cores)
 # Added: 0.2.0
 threads = 2
 # NYI
@@ -69,7 +69,7 @@ fancy_text = true
 verbose = false 
 
 # NYI
-runfile_folder = "" 
+runtime_folder = "" 
 
 # This is 1 target, to configure more just put more of these [[target]] tags followed by the target declaration
 # Added: 0.1.0
@@ -78,6 +78,10 @@ runfile_folder = ""
 # Optional: the tag for logging and for backing up (must use if the target is optional)
 # Added: 0.1.0
 tag = "Config"
+
+# Optional: overrides the global `multi_threaded` flag
+# Added: 0.3.1
+multi_threaded = false
 
 # The path to the file or folder to backup
 # Added: 0.1.0
