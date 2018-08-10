@@ -28,7 +28,7 @@ reach version **1.0.0** and will be considered "stable".
 
 - [x] multiple configurable backup targets
     - [x] each has an optional tag for identification (manual mode and logging)
-    - [ ] option to ignore files and folders (possibly regex)
+    - [x] option to ignore files and folders (possibly regex)
     - [x] option to disable auto backup (manual mode)
     - [ ] number of copies to keep (>1 disables timestamp checks)
     - [x] option to enable always copy

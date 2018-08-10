@@ -95,11 +95,23 @@ optional = false
 # Added: 0.1.0
 always_copy = false 
 
-# NYI
-ignore_files = [] 
+# Optional: A list of files to be ignored during backup
+# Prefix the string with a r# to use a regex pattern
+# If he string is not prefixed with a r# the full filename is evaluated
+# Added: 0.3.0
+ignore_files = [
+    'r#.*\.ba(c|k)',
+    '.build'
+] 
 
-# NYI
-ignore_folders = [] 
+# Optional: Same as `ignore_files` except it evaluates the folder path relative
+# to the base directory (in example, target: "/home/user/Documents" the sub-folder
+# "Rust/backup_rat" gets evaluated as such)
+# Added: 0.3.0
+ignore_folders = [
+    'r#temp$',
+    'build'
+] 
 
 # NYI
 keep_num = 1 
