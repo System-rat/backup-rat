@@ -117,8 +117,15 @@ ignore_folders = [
     'build'
 ] 
 
-# NYI
-keep_num = 1 
+# Optional: How many copies of the target to keep (folder targets only).
+# The name of the directory to be copied will be put in the backup directory
+# followed by `keep_num` number of subdirectories with the date of the backup as
+# the name.
+# DateTime directories are only created if `keep_num` is greater than 1.
+# If `keep_num` is greater than 1, always_copy is ignored as it will always create a new directory.
+# Example directory location: /mnt/Backup/etc/2042-2-18 12:00:43/
+# Added: 0.4.0
+keep_num = 2
 
 # Example of a second target that uses the same tag
 [[target]] 

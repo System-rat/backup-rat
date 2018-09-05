@@ -5,7 +5,7 @@
 //! Contains helper methods and structs for backup operations
 //! such as checking timestamps, copying to targets and restoring
 
-use std::fs::{copy, create_dir, create_dir_all, read_dir};
+use std::fs::{copy, create_dir, create_dir_all, read_dir, remove_dir_all};
 use std::fs::{DirEntry, File, Metadata};
 use std::io::{Error, ErrorKind, Result};
 use std::path::PathBuf;
@@ -116,9 +116,14 @@ pub fn ignored(
 /// Returns an error if the target could not be written to or the *from* target could
 /// not be read
 pub fn copy_to(target: &BackupTarget) -> Result<i32> {
+    let now = ::chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
     let from = &target.path;
     let to = &target.target_path;
-    let check_timestamp = !target.always_copy;
+    let check_timestamp = if target.keep_num == 1 {
+        !target.always_copy
+    } else {
+        false
+    };
     let ignored_files = &target.ignore_files;
     let ignored_folders = &target.ignore_folders;
     let mut num: i32 = 0;
@@ -152,15 +157,26 @@ pub fn copy_to(target: &BackupTarget) -> Result<i32> {
         for dir_entry in read_dir(from)? {
             if let Ok(dir_entry) = dir_entry {
                 let file_name = dir_entry.file_name();
-                copy_queue.push((
-                    dir_entry,
-                    to.join(from.file_name().unwrap()).join(file_name),
-                ));
+                if target.keep_num == 1 {
+                    copy_queue.push((
+                        dir_entry,
+                        to.join(from.file_name().unwrap()).join(file_name),
+                    ));
+                } else {
+                    let time_dir = to
+                        .join(from.file_name().unwrap())
+                        .join(&now)
+                        .join(file_name);
+                    copy_queue.push((dir_entry, time_dir));
+                }
             }
         }
         // creates the target folder if it doesn't exist
-        if File::open(to.join(from.file_name().unwrap())).is_err() {
+        if target.keep_num == 1 && File::open(to.join(from.file_name().unwrap())).is_err() {
             create_dir(to.join(from.file_name().unwrap()))?;
+        } else if target.keep_num > 1 {
+            create_dir(to.join(from.file_name().unwrap()).join(&now))?;
+            clear_old(&to.join(from.file_name().unwrap()), target.keep_num)
         }
 
         while !copy_queue.is_empty() {
@@ -238,9 +254,14 @@ enum Command {
 /// # Notes
 /// - If the target is a file it will use no threads
 pub fn threaded_copy_to(target: &BackupTarget, num_threads: i32) -> Result<i32> {
+    let now = ::chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
     let from = &target.path;
     let to = &target.target_path;
-    let check_timestamp = !target.always_copy;
+    let check_timestamp = if target.keep_num == 1 {
+        !target.always_copy
+    } else {
+        false
+    };
     let ignored_files = &target.ignore_files;
     let ignored_folders = &target.ignore_folders;
     if let Ok(file) = File::open(from) {
@@ -250,7 +271,7 @@ pub fn threaded_copy_to(target: &BackupTarget, num_threads: i32) -> Result<i32> 
         }
     }
 
-    if File::open(to).is_err() {
+    if File::open(&to).is_err() {
         return Err(Error::new(
             ErrorKind::NotFound,
             "The destination is unavailable!",
@@ -287,8 +308,20 @@ pub fn threaded_copy_to(target: &BackupTarget, num_threads: i32) -> Result<i32> 
 
     for dir_entry in read_dir(from)? {
         if let Ok(dir_entry) = dir_entry {
-            read_files.push((dir_entry.path(), to.clone().join(from.file_name().unwrap())));
+            if target.keep_num == 1 {
+                read_files.push((dir_entry.path(), to.clone().join(from.file_name().unwrap())));
+            } else {
+                read_files.push((
+                    dir_entry.path(),
+                    to.clone().join(from.file_name().unwrap()).join(&now),
+                ));
+            }
         }
+    }
+
+    if target.keep_num > 1 {
+        create_dir_all(to.clone().join(from.file_name().unwrap()).join(&now)).is_ok();
+        clear_old(&to.join(from.file_name().unwrap()), target.keep_num);
     }
 
     // WARNING: This code is confusing...
@@ -360,6 +393,43 @@ pub fn threaded_copy_to(target: &BackupTarget, num_threads: i32) -> Result<i32> 
         num += handle.join().unwrap();
     }
     Ok(num)
+}
+
+/// Clears the oldest backups based on keep num
+fn clear_old(directory: &PathBuf, keep_num: i32) {
+    let file_opt = File::open(directory);
+    if let Ok(file) = file_opt {
+        if file.metadata().unwrap().is_file() {
+            return;
+        }
+        if let Ok(entries) = read_dir(directory) {
+            let mut dir_names: Vec<::std::ffi::OsString> = entries
+                .map(|entry: Result<DirEntry>| {
+                    if let Ok(entry) = entry {
+                        entry.file_name()
+                    } else {
+                        panic!("Could not read the directory!")
+                    }
+                })
+                .collect();
+            if dir_names.len() < 2 {
+                return;
+            }
+
+            while dir_names.len() > keep_num as usize {
+                let mut new_min = dir_names[0].clone();
+                let mut index = 0;
+                for i in 1..dir_names.len() {
+                    if dir_names[i] < new_min {
+                        new_min = dir_names[i].clone();
+                        index = i;
+                    }
+                }
+                dir_names.remove(index);
+                remove_dir_all(directory.join(new_min)).is_ok();
+            }
+        }
+    }
 }
 
 /// Backs up the target

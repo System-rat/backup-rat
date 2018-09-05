@@ -8,6 +8,7 @@ extern crate regex;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+extern crate chrono;
 extern crate toml;
 
 pub mod config;
@@ -24,7 +25,7 @@ use operation::copy_to_target;
 fn main() {
     // Reads the command-line arguments using clap
     let options = App::new("backup-rat")
-        .version("0.3.1")
+        .version("0.4.0")
         .author("System.rat <system.rodent@gmail.com>")
         .about("A versatile backup program")
         .arg(
