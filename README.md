@@ -2,16 +2,13 @@
 # About
 
 A small learning project created due to a need for a highly configurable
-backup program and a reason to not procrastinate.
+backup program and to learn Rust better.
 
-**Note:** the project development is slow due to other projects currently occupying
-my time and the fact that college (or university.. one of those) season is almost upon me.
+**Note:** the project development is slow due to me going to college.
 
 # License
-The project is licensed under the [MLP (Mozilla public license)](https://www.mozilla.org/en-US/MPL/2.0/).
+The project is licensed under the [MPL (Mozilla public license)](https://www.mozilla.org/en-US/MPL/2.0/).
 The license is included in the LICENSE.txt
-
-You may use the icons and ASCII art as you wish, but its better to be creative.
 
 # Installation
 Read the USAGE.md file.
