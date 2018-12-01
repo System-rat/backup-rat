@@ -25,7 +25,7 @@ use operation::copy_to_target;
 fn main() {
     // Reads the command-line arguments using clap
     let options = App::new("backup-rat")
-        .version("0.4.0")
+        .version("0.4.1")
         .author("System.rat <system.rodent@gmail.com>")
         .about("A versatile backup program")
         .arg(

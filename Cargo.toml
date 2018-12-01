@@ -1,6 +1,6 @@
 [package]
 name = "backup_rat"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["System.rat"]
 description = "A highly configurable backup tool"
 documentation = "https://github.com/System-rat/backup-rat"

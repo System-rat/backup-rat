@@ -6,7 +6,7 @@
 //! for easy reading
 
 use std::default::Default;
-use std::env::home_dir;
+use directories::BaseDirs;
 use std::fs::read_to_string;
 use std::path::PathBuf;
 
@@ -58,7 +58,7 @@ impl Default for Config {
             color: false,
             fancy_text: true,
             verbose: false,
-            runtime_folder: home_dir().expect("Can't find home dir").join(".backup_rat"),
+            runtime_folder: BaseDirs::new().expect("Could not get base directories").home_dir().join(".backup_rat"),
         }
     }
 }
@@ -118,7 +118,7 @@ pub fn load_config(config_path: PathBuf) -> Config {
                 verbose: raw_config.verbose.unwrap_or(false),
                 runtime_folder: raw_config
                     .runtime_folder
-                    .unwrap_or(home_dir().expect("Can't find home dir").join(".backup_rat")),
+                    .unwrap_or(BaseDirs::new().expect("Could not get base directories").home_dir().join(".backup_rat")),
             }
         } else {
             Config::default()
