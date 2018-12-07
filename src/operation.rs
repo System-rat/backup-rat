@@ -15,7 +15,7 @@ use std::thread::{spawn, JoinHandle};
 
 use regex::Regex;
 
-use super::config::BackupTarget;
+use crate::config::BackupTarget;
 
 /// Returns the size of the directory or file in bytes
 ///
@@ -24,6 +24,7 @@ use super::config::BackupTarget;
 ///
 /// # Error
 /// returns and error if the file or folder can't be read
+#[allow(dead_code)]
 pub fn size_of(path: &PathBuf) -> Result<u64> {
     let file: &File = &File::open(path)?;
     let metadata: Metadata = file.metadata().unwrap();
@@ -116,7 +117,7 @@ pub fn ignored(
 /// Returns an error if the target could not be written to or the *from* target could
 /// not be read
 pub fn copy_to(target: &BackupTarget) -> Result<i32> {
-    let now = ::chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+    let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
     let from = &target.path;
     let to = &target.target_path;
     let check_timestamp = if target.keep_num == 1 {
@@ -254,7 +255,7 @@ enum Command {
 /// # Notes
 /// - If the target is a file it will use no threads
 pub fn threaded_copy_to(target: &BackupTarget, num_threads: i32) -> Result<i32> {
-    let now = ::chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+    let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
     let from = &target.path;
     let to = &target.target_path;
     let check_timestamp = if target.keep_num == 1 {
@@ -403,7 +404,7 @@ fn clear_old(directory: &PathBuf, keep_num: i32) {
             return;
         }
         if let Ok(entries) = read_dir(directory) {
-            let mut dir_names: Vec<::std::ffi::OsString> = entries
+            let mut dir_names: Vec<std::ffi::OsString> = entries
                 .map(|entry: Result<DirEntry>| {
                     if let Ok(entry) = entry {
                         entry.file_name()

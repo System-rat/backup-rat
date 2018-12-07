@@ -5,8 +5,9 @@
 //! Loads the config file into a config struct
 //! for easy reading
 
-use std::default::Default;
 use directories::BaseDirs;
+use serde_derive::Deserialize;
+use std::default::Default;
 use std::fs::read_to_string;
 use std::path::PathBuf;
 
@@ -52,13 +53,16 @@ impl Default for Config {
     fn default() -> Config {
         Config {
             multi_threaded: true,
-            threads: ::num_cpus::get() as i32,
+            threads: num_cpus::get() as i32,
             targets: Vec::new(),
             daemon_interval: 0,
             color: false,
             fancy_text: true,
             verbose: false,
-            runtime_folder: BaseDirs::new().expect("Could not get base directories").home_dir().join(".backup_rat"),
+            runtime_folder: BaseDirs::new()
+                .expect("Could not get base directories")
+                .home_dir()
+                .join(".backup_rat"),
         }
     }
 }
@@ -90,7 +94,7 @@ pub struct BackupTarget {
 pub fn load_config(config_path: PathBuf) -> Config {
     let file = read_to_string(config_path);
     let conf: Config = if let Ok(file) = file {
-        let raw_config: Result<InnerConfig, _> = ::toml::from_str(&file);
+        let raw_config: Result<InnerConfig, _> = toml::from_str(&file);
         if let Ok(raw_config) = raw_config {
             let mut targets: Vec<BackupTarget> = Vec::new();
             if let Some(raw_targets) = raw_config.target {
@@ -110,15 +114,18 @@ pub fn load_config(config_path: PathBuf) -> Config {
             }
             Config {
                 multi_threaded: raw_config.multi_threaded.unwrap_or(true),
-                threads: raw_config.threads.unwrap_or(::num_cpus::get() as i32),
+                threads: raw_config.threads.unwrap_or(num_cpus::get() as i32),
                 targets: targets,
                 daemon_interval: raw_config.daemon_interval.unwrap_or(0),
                 color: raw_config.color.unwrap_or(false),
                 fancy_text: raw_config.fancy_text.unwrap_or(true),
                 verbose: raw_config.verbose.unwrap_or(false),
-                runtime_folder: raw_config
-                    .runtime_folder
-                    .unwrap_or(BaseDirs::new().expect("Could not get base directories").home_dir().join(".backup_rat")),
+                runtime_folder: raw_config.runtime_folder.unwrap_or(
+                    BaseDirs::new()
+                        .expect("Could not get base directories")
+                        .home_dir()
+                        .join(".backup_rat"),
+                ),
             }
         } else {
             Config::default()
