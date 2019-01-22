@@ -17,39 +17,6 @@ use regex::Regex;
 
 use crate::config::BackupTarget;
 
-/// Returns the size of the directory or file in bytes
-///
-/// # Parameters
-/// - path: a reference of a path to the file or folder in question
-///
-/// # Error
-/// returns and error if the file or folder can't be read
-#[allow(dead_code)]
-pub fn size_of(path: &PathBuf) -> Result<u64> {
-    let file: &File = &File::open(path)?;
-    let metadata: Metadata = file.metadata().unwrap();
-    if metadata.is_file() {
-        return Ok(metadata.len());
-    }
-    let mut sum: u64 = 0;
-    for file in read_dir(path)? {
-        if let Ok(file) = file {
-            let meta: &Metadata = &file.metadata().unwrap();
-            let spath: &PathBuf = &file.path();
-            if meta.is_file() {
-                sum += meta.len();
-            } else {
-                if let Ok(size) = size_of(spath) {
-                    sum += size;
-                }
-            }
-        } else {
-            continue;
-        }
-    }
-    Ok(sum)
-}
-
 /// Checks if a directory or file is ignored
 ///
 /// # Parameters
@@ -64,8 +31,8 @@ pub fn size_of(path: &PathBuf) -> Result<u64> {
 pub fn ignored(
     path: &PathBuf,
     metadata: &Metadata,
-    ignored_files: &Vec<String>,
-    ignored_folders: &Vec<String>,
+    ignored_files: &[String],
+    ignored_folders: &[String],
 ) -> bool {
     if metadata.is_file() {
         for filter in ignored_files {
@@ -76,10 +43,8 @@ pub fn ignored(
                         return true;
                     }
                 }
-            } else {
-                if path.file_name().unwrap().to_str().unwrap() == filter {
-                    return true;
-                }
+            } else if path.file_name().unwrap().to_str().unwrap() == filter {
+                return true;
             }
         }
     } else {
@@ -91,10 +56,8 @@ pub fn ignored(
                         return true;
                     }
                 }
-            } else {
-                if path.as_os_str().to_str().unwrap() == filter {
-                    return true;
-                }
+            } else if path.as_os_str().to_str().unwrap() == filter {
+                return true;
             }
         }
     }
@@ -291,10 +254,8 @@ pub fn threaded_copy_to(target: &BackupTarget, num_threads: i32) -> Result<i32> 
                 if let Command::Terminate = command {
                     break;
                 } else if let Command::Copy(from, to) = command {
-                    if create_dir_all(to.parent().unwrap()).is_ok() {
-                        if copy(from, to).is_ok() {
-                            num += 1;
-                        }
+                    if create_dir_all(to.parent().unwrap()).is_ok() && copy(from, to).is_ok() {
+                        num += 1;
                     }
                 }
             }
@@ -346,18 +307,11 @@ pub fn threaded_copy_to(target: &BackupTarget, num_threads: i32) -> Result<i32> 
                 if let Ok(entries) = read_dir(&file_path) {
                     for entry in entries {
                         if let Ok(entry) = entry {
-                            if let Ok(f) = File::open(entry.path()) {
-                                if f.metadata().unwrap().is_dir() {
-                                    read_files.push((
-                                        entry.path(),
-                                        file_parent.join(file_path.file_name().unwrap()),
-                                    ));
-                                } else {
-                                    read_files.push((
-                                        entry.path(),
-                                        file_parent.join(file_path.file_name().unwrap()),
-                                    ));
-                                }
+                            if File::open(entry.path()).is_ok() {
+                                read_files.push((
+                                    entry.path(),
+                                    file_parent.join(file_path.file_name().unwrap()),
+                                ));
                             }
                         }
                     }
@@ -420,9 +374,9 @@ fn clear_old(directory: &PathBuf, keep_num: i32) {
             while dir_names.len() > keep_num as usize {
                 let mut new_min = dir_names[0].clone();
                 let mut index = 0;
-                for i in 1..dir_names.len() {
-                    if dir_names[i] < new_min {
-                        new_min = dir_names[i].clone();
+                for (i, item) in dir_names.iter().enumerate().skip(1) {
+                    if *item < new_min {
+                        new_min = item.clone();
                         index = i;
                     }
                 }
@@ -458,11 +412,9 @@ pub fn copy_to_target(target: &BackupTarget, threads: i32) -> Result<i32> {
         ));
     }
 
-    let res;
     if threads > 1 {
-        res = threaded_copy_to(target, threads)?;
+        Ok(threaded_copy_to(target, threads)?)
     } else {
-        res = copy_to(target)?;
+        Ok(copy_to(target)?)
     }
-    Ok(res)
 }

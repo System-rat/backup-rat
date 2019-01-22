@@ -4,8 +4,6 @@
 A small learning project created due to a need for a highly configurable
 backup program and to learn Rust better.
 
-**Note:** the project development is slow due to me going to college.
-
 # License
 The project is licensed under the [MPL (Mozilla public license)](https://www.mozilla.org/en-US/MPL/2.0/).
 The license is included in the LICENSE.txt

@@ -2,8 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 mod config;
-mod copy_operation;
-mod local_copy;
 mod operation;
 
 use std::io::prelude::*;
@@ -59,10 +57,11 @@ fn main() {
                 print!("{}... ", &target.path.display());
             }
             flush();
-            let mut threads = 1;
-            if config.multi_threaded {
-                threads = config.threads;
-            }
+            let mut threads = if config.multi_threaded {
+                config.threads
+            } else {
+                1
+            };
             // Per-target override
             if let Some(threaded) = target.multi_threaded {
                 if threaded {
@@ -86,10 +85,11 @@ fn main() {
                     has_targets = true;
                     print!("Backing up target: {}... ", tag);
                     flush();
-                    let mut threads = 1;
-                    if config.multi_threaded {
-                        threads = config.threads;
-                    }
+                    let mut threads = if config.multi_threaded {
+                        config.threads
+                    } else {
+                        1
+                    };
                     // Per-target override
                     if let Some(threaded) = target.multi_threaded {
                         if threaded {

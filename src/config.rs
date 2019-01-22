@@ -103,8 +103,8 @@ pub fn load_config(config_path: PathBuf) -> Config {
                         tag: target.tag,
                         multi_threaded: target.multi_threaded,
                         path: target.path,
-                        ignore_files: target.ignore_files.unwrap_or(Vec::new()),
-                        ignore_folders: target.ignore_folders.unwrap_or(Vec::new()),
+                        ignore_files: target.ignore_files.unwrap_or_default(),
+                        ignore_folders: target.ignore_folders.unwrap_or_default(),
                         target_path: target.target_path,
                         optional: target.optional.unwrap_or(false),
                         keep_num: target.keep_num.unwrap_or(1),
@@ -115,17 +115,17 @@ pub fn load_config(config_path: PathBuf) -> Config {
             Config {
                 multi_threaded: raw_config.multi_threaded.unwrap_or(true),
                 threads: raw_config.threads.unwrap_or(num_cpus::get() as i32),
-                targets: targets,
+                targets,
                 daemon_interval: raw_config.daemon_interval.unwrap_or(0),
                 color: raw_config.color.unwrap_or(false),
                 fancy_text: raw_config.fancy_text.unwrap_or(true),
                 verbose: raw_config.verbose.unwrap_or(false),
-                runtime_folder: raw_config.runtime_folder.unwrap_or(
+                runtime_folder: raw_config.runtime_folder.unwrap_or_else(|| {
                     BaseDirs::new()
                         .expect("Could not get base directories")
                         .home_dir()
-                        .join(".backup_rat"),
-                ),
+                        .join(".backup_rat")
+                }),
             }
         } else {
             Config::default()
