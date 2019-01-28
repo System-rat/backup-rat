@@ -403,18 +403,30 @@ fn clear_old(directory: &PathBuf, keep_num: i32) {
 ///
 /// # TODO
 /// - Actually use the keep_num variable of the target
-pub fn copy_to_target(target: &BackupTarget, threads: i32) -> Result<i32> {
+pub fn copy_to_target(target: BackupTarget, threads: i32) -> Result<i32> {
     // checks
-    if File::open(&target.target_path).is_err() {
+    /*if File::open(&target.target_path).is_err() {
         return Err(Error::new(
             ErrorKind::NotFound,
             "The destination is unavailable!",
         ));
-    }
+    }*/
 
+    use crate::copy_operation::CopyOperation;
+    use crate::local_copy::LocalCopy;
+
+    let operation = LocalCopy::prepare_target(target).unwrap();
+    let files = operation.file_list();
+    let mut method = operation.copy_method();
+    files.into_iter().for_each(|(from, to)| {
+        method(from, to).is_ok();
+    });
+
+    Ok(0)
+    /*
     if threads > 1 {
-        Ok(threaded_copy_to(target, threads)?)
+        Ok(threaded_copy_to(&target, threads)?)
     } else {
-        Ok(copy_to(target)?)
-    }
+        Ok(copy_to(&target)?)
+    }*/
 }

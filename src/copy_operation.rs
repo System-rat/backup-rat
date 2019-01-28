@@ -17,20 +17,11 @@ pub trait CopyOperation {
     /// Returns an error if the operation fails
     fn copy_method(
         &self,
-    ) -> Box<FnOnce(std::path::PathBuf, std::path::PathBuf) -> Result<(), Self::Error>>;
+    ) -> Box<FnMut(std::path::PathBuf, std::path::PathBuf) -> Result<(), Self::Error>>;
 
     /// Gets a list of files to be copied
     ///
     /// # Returns
     /// The files to be copied
-    fn file_list(&self) -> Vec<std::path::PathBuf>;
-
-    /// Prepares the target
-    ///
-    /// # Parameters
-    /// - target: The config target to be prepared
-    ///
-    /// # Errors
-    /// Returns an error if the preparation failed
-    fn prepare_target(&mut self, target: crate::config::BackupTarget) -> Result<(), Self::Error>;
+    fn file_list(&self) -> Vec<(std::path::PathBuf, std::path::PathBuf)>;
 }

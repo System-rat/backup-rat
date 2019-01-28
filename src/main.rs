@@ -72,7 +72,7 @@ fn main() {
                     threads = 1;
                 }
             }
-            let res = copy_to_target(&target, threads);
+            let res = copy_to_target(target, threads);
             if let Ok(num) = res {
                 println!("Done: {} files copied.", num);
             } else {
@@ -100,7 +100,7 @@ fn main() {
                             threads = 1;
                         }
                     }
-                    let res = copy_to_target(&target, threads);
+                    let res = copy_to_target(target, threads);
                     if let Ok(num) = res {
                         println!("Done: {} files copied.", num);
                     } else {
