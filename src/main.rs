@@ -2,17 +2,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 mod config;
-mod copy_operation;
-mod local_copy;
-mod operation;
+mod operations;
 
 use std::io::prelude::*;
-use std::path::PathBuf;
 
-use crate::config::load_config;
-use crate::operation::copy_to_target;
+use crate::config::{get_config_folder, load_config};
 use clap::{App, Arg};
-use directories::ProjectDirs;
 
 fn main() {
     // Reads the command-line arguments using clap
@@ -43,7 +38,7 @@ fn main() {
     );
 
     let mut has_targets = false;
-    let config = load_config(get_config_folder().join("config.toml"));
+    let config: config::Config = load_config(get_config_folder().join("config.toml"));
 
     // The all target has been invoked
     if options.value_of("TARGET").unwrap() == "all" {
@@ -59,20 +54,7 @@ fn main() {
                 print!("{}... ", &target.path.display());
             }
             flush();
-            let mut threads = if config.multi_threaded {
-                config.threads
-            } else {
-                1
-            };
-            // Per-target override
-            if let Some(threaded) = target.multi_threaded {
-                if threaded {
-                    threads = config.threads;
-                } else {
-                    threads = 1;
-                }
-            }
-            let res = copy_to_target(target, threads);
+            let res = target.backup();
             if let Ok(num) = res {
                 println!("Done: {} files copied.", num);
             } else {
@@ -87,20 +69,7 @@ fn main() {
                     has_targets = true;
                     print!("Backing up target: {}... ", tag);
                     flush();
-                    let mut threads = if config.multi_threaded {
-                        config.threads
-                    } else {
-                        1
-                    };
-                    // Per-target override
-                    if let Some(threaded) = target.multi_threaded {
-                        if threaded {
-                            threads = config.threads;
-                        } else {
-                            threads = 1;
-                        }
-                    }
-                    let res = copy_to_target(target, threads);
+                    let res = target.backup();
                     if let Ok(num) = res {
                         println!("Done: {} files copied.", num);
                     } else {
@@ -119,12 +88,4 @@ fn main() {
 
 fn flush() {
     std::io::stdout().flush().unwrap();
-}
-
-fn get_config_folder() -> PathBuf {
-    if let Some(project_dirs) = ProjectDirs::from("com", "System.rat", "backup-rat") {
-        return PathBuf::from(project_dirs.config_dir());
-    } else {
-        return PathBuf::new();
-    }
 }

@@ -5,81 +5,121 @@
 //! Loads the config file into a config struct
 //! for easy reading
 
-use directories::BaseDirs;
+use directories::{BaseDirs, ProjectDirs};
 use serde_derive::Deserialize;
 use std::default::Default;
 use std::fs::read_to_string;
 use std::path::PathBuf;
 
-#[derive(Deserialize)]
-struct InnerConfig {
-    pub multi_threaded: Option<bool>,
-    pub threads: Option<i32>,
-    pub target: Option<Vec<InnerBackupTarget>>,
-    pub daemon_interval: Option<i32>,
-    pub color: Option<bool>,
-    pub fancy_text: Option<bool>,
-    pub verbose: Option<bool>,
-    pub runtime_folder: Option<PathBuf>,
-}
-
-#[derive(Deserialize)]
-struct InnerBackupTarget {
-    pub tag: Option<String>,
-    pub multi_threaded: Option<bool>,
-    pub path: PathBuf,
-    pub ignore_files: Option<Vec<String>>,
-    pub ignore_folders: Option<Vec<String>>,
-    pub target_path: PathBuf,
-    pub optional: Option<bool>,
-    pub keep_num: Option<i32>,
-    pub always_copy: Option<bool>,
-}
-
-/// The config object that contains the relevant configuration
-#[derive(Debug, PartialEq)]
+#[derive(Deserialize, PartialEq, Debug)]
 pub struct Config {
-    pub multi_threaded: bool,
-    pub threads: i32,
+    #[serde(default = "Vec::new")]
+    #[serde(rename = "target")]
     pub targets: Vec<BackupTarget>,
+    #[serde(default = "default_daemon_interval")]
     pub daemon_interval: i32,
+    #[serde(default = "default_color")]
     pub color: bool,
+    #[serde(default = "default_fancy_text")]
     pub fancy_text: bool,
+    #[serde(default = "default_verbose")]
     pub verbose: bool,
+    #[serde(default = "default_runtime_folder")]
     pub runtime_folder: PathBuf,
+}
+
+#[derive(Deserialize, PartialEq, Debug)]
+pub struct BackupTarget {
+    pub tag: Option<String>,
+    pub path: PathBuf,
+    #[serde(default = "Vec::new")]
+    pub ignore_files: Vec<String>,
+    #[serde(default = "Vec::new")]
+    pub ignore_folders: Vec<String>,
+    pub target_path: PathBuf,
+    #[serde(default = "default_optional")]
+    pub optional: bool,
+    #[serde(default = "default_keep_num")]
+    pub keep_num: i32,
+    #[serde(default = "default_always_copy")]
+    pub always_copy: bool,
+    #[serde(flatten)]
+    pub additional_options: Option<Additional>,
+}
+
+#[derive(Deserialize, PartialEq, Debug)]
+#[serde(untagged)]
+pub enum Additional {
+    Network { url: String, password: String },
+}
+
+#[derive(Deserialize, PartialEq, Debug)]
+pub struct SharedOptions {}
+
+impl BackupTarget {
+    pub fn backup(self) -> std::io::Result<i32> {
+        if let Some(ado) = self.additional_options {
+            match ado {
+                Additional::Network { .. } => unimplemented!(),
+            }
+        } else {
+            crate::operations::local_copy(self)
+        }
+    }
+}
+
+// ***************
+// Config defaults
+// ***************
+const fn default_daemon_interval() -> i32 {
+    0
+}
+
+const fn default_color() -> bool {
+    true
+}
+
+const fn default_fancy_text() -> bool {
+    true
+}
+
+const fn default_verbose() -> bool {
+    false
+}
+
+fn default_runtime_folder() -> PathBuf {
+    BaseDirs::new()
+        .expect("Could not get base directories")
+        .home_dir()
+        .join(".backup_rat")
+}
+
+// ***************
+// Target defaults
+// ***************
+const fn default_optional() -> bool {
+    false
+}
+
+const fn default_keep_num() -> i32 {
+    1
+}
+
+const fn default_always_copy() -> bool {
+    false
 }
 
 impl Default for Config {
     fn default() -> Config {
         Config {
-            multi_threaded: true,
-            threads: num_cpus::get() as i32,
+            daemon_interval: default_daemon_interval(),
+            color: default_color(),
+            fancy_text: default_fancy_text(),
+            verbose: default_verbose(),
+            runtime_folder: default_runtime_folder(),
             targets: Vec::new(),
-            daemon_interval: 0,
-            color: false,
-            fancy_text: true,
-            verbose: false,
-            runtime_folder: BaseDirs::new()
-                .expect("Could not get base directories")
-                .home_dir()
-                .join(".backup_rat"),
         }
     }
-}
-
-/// The config sub-struct that contains information about a
-/// backup target
-#[derive(Debug, PartialEq)]
-pub struct BackupTarget {
-    pub tag: Option<String>,
-    pub multi_threaded: Option<bool>,
-    pub path: PathBuf,
-    pub ignore_files: Vec<String>,
-    pub ignore_folders: Vec<String>,
-    pub target_path: PathBuf,
-    pub optional: bool,
-    pub keep_num: i32,
-    pub always_copy: bool,
 }
 
 /// Loads the config file and returns the Config struct
@@ -94,44 +134,62 @@ pub struct BackupTarget {
 pub fn load_config(config_path: PathBuf) -> Config {
     let file = read_to_string(config_path);
     let conf: Config = if let Ok(file) = file {
-        let raw_config: Result<InnerConfig, _> = toml::from_str(&file);
-        if let Ok(raw_config) = raw_config {
-            let mut targets: Vec<BackupTarget> = Vec::new();
-            if let Some(raw_targets) = raw_config.target {
-                for target in raw_targets {
-                    targets.push(BackupTarget {
-                        tag: target.tag,
-                        multi_threaded: target.multi_threaded,
-                        path: target.path,
-                        ignore_files: target.ignore_files.unwrap_or_default(),
-                        ignore_folders: target.ignore_folders.unwrap_or_default(),
-                        target_path: target.target_path,
-                        optional: target.optional.unwrap_or(false),
-                        keep_num: target.keep_num.unwrap_or(1),
-                        always_copy: target.always_copy.unwrap_or(false),
-                    });
-                }
-            }
-            Config {
-                multi_threaded: raw_config.multi_threaded.unwrap_or(true),
-                threads: raw_config.threads.unwrap_or(num_cpus::get() as i32),
-                targets,
-                daemon_interval: raw_config.daemon_interval.unwrap_or(0),
-                color: raw_config.color.unwrap_or(false),
-                fancy_text: raw_config.fancy_text.unwrap_or(true),
-                verbose: raw_config.verbose.unwrap_or(false),
-                runtime_folder: raw_config.runtime_folder.unwrap_or_else(|| {
-                    BaseDirs::new()
-                        .expect("Could not get base directories")
-                        .home_dir()
-                        .join(".backup_rat")
-                }),
-            }
-        } else {
-            Config::default()
-        }
+        toml::from_str(file.as_ref()).unwrap_or_default()
     } else {
         Config::default()
     };
     conf
+}
+
+pub fn get_config_folder() -> PathBuf {
+    if let Some(project_dirs) = ProjectDirs::from("com", "System.rat", "backup-rat") {
+        return PathBuf::from(project_dirs.config_dir());
+    } else {
+        return PathBuf::new();
+    }
+}
+
+#[test]
+fn loading_from_string() {
+    let target_config = Config {
+        color: false,
+        fancy_text: false,
+        daemon_interval: 100,
+        targets: vec![BackupTarget {
+            tag: Some("target1".to_owned()),
+            path: PathBuf::from("/etc"),
+            target_path: PathBuf::from("/mnt/backup"),
+            keep_num: 1,
+            always_copy: false,
+            optional: false,
+            ignore_files: Vec::new(),
+            ignore_folders: Vec::new(),
+            additional_options: Some(Additional::Network {
+                // Not an actual url mind you
+                url: "www.test.com".to_owned(),
+                password: "test".to_owned(),
+            }),
+        }],
+        verbose: true,
+        runtime_folder: PathBuf::from("/"),
+    };
+    let generated_config = toml::from_str(
+        "
+        color = false
+        fancy_text = false
+        daemon_interval = 100
+        verbose = true
+        runtime_folder = \"/\"
+
+        [[target]]
+        tag = \"target1\"
+        path = \"/etc\"
+        target_path = \"/mnt/backup\"
+        url = \"www.test.com\"
+        password = \"test\"
+    ",
+    )
+    .unwrap();
+
+    assert_eq!(target_config, generated_config);
 }
