@@ -18,7 +18,6 @@ will be implemented. When all of these are complete the project will officially
 reach version **1.0.0** and will be considered "stable".
 
 - [x] backing up modified files
-    - [x] multi-threaded (configurable)
 
 
 - [x] multiple configurable backup targets
@@ -27,6 +26,7 @@ reach version **1.0.0** and will be considered "stable".
     - [x] option to disable auto backup (manual mode)
     - [x] number of copies to keep (>1 disables timestamp checks)
     - [x] option to enable always copy
+    - [x] additional options for different types of backups (ie. network)
 
 
 - [ ] restore from backup
