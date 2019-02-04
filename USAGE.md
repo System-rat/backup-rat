@@ -49,13 +49,6 @@ All of the **Optional** variables are set to defaults in this example
 
 ```toml
 
-# Wether to use multi threading for copying or not
-# Added: 0.2.0
-multi_threaded = true 
-
-# The number of threads to use in multi threaded copying (defaults to the number of cores)
-# Added: 0.2.0
-threads = 2
 # NYI
 daemon_interval = 0 
 
@@ -78,10 +71,6 @@ runtime_folder = ""
 # Optional: the tag for logging and for backing up (must use if the target is optional)
 # Added: 0.1.0
 tag = "Config"
-
-# Optional: overrides the global `multi_threaded` flag
-# Added: 0.3.1
-multi_threaded = false
 
 # The path to the file or folder to backup
 # Added: 0.1.0

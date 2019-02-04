@@ -12,7 +12,7 @@ use clap::{App, Arg};
 fn main() {
     // Reads the command-line arguments using clap
     let options = App::new("backup-rat")
-        .version("0.5.0")
+        .version("0.5.1")
         .author("System.rat <system.rodent@gmail.com>")
         .about("A versatile backup program")
         .arg(
