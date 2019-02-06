@@ -15,26 +15,26 @@ Enter the directory
     $ cd backup-rat
 Install from the source
 
-    $ cargo install
+    $ cargo install --path .
 
 
 # Binary
 Currently the binary **REQUIRES** a config file to operate correctly
 (or not if you don't want any targets but that kinda defeats the purpose).
 
-The version number before the **$** symbol indicates the version this feature was added
-
 Backs up all NON-optional targets in the config file
 
-    0.1.0 - $ backup-rat all 
+    $ backup-rat backup
 
 
 Backs up all targets with the "*Config*" tag
 
-    0.1.0 - $ backup-rat Config
+    $ backup-rat backup Config
 
 
-Thats it... (for now)
+Generate the completions for various shells
+
+    $ backup-rat completion bash
 
 # Configuration
 The config file is located at `$HOME/.config/backup-rat/config.toml` for *NIX systems
@@ -47,7 +47,7 @@ All of the **Optional** variables are set to defaults in this example
 
 **NYI** - Not yet implemented (don't use it, there is no need)
 
-```toml
+```ini
 
 # NYI
 daemon_interval = 0 

@@ -179,14 +179,14 @@ fn loading_from_string() {
         fancy_text = false
         daemon_interval = 100
         verbose = true
-        runtime_folder = \"/\"
+        runtime_folder = '/'
 
         [[target]]
-        tag = \"target1\"
-        path = \"/etc\"
-        target_path = \"/mnt/backup\"
-        url = \"www.test.com\"
-        password = \"test\"
+        tag = 'target1'
+        path = '/etc'
+        target_path = '/mnt/backup'
+        url = 'www.test.com'
+        password = 'test'
     ",
     )
     .unwrap();

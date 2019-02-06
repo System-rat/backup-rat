@@ -8,7 +8,7 @@ backup program and to learn Rust better.
 The project is licensed under the [MPL (Mozilla public license)](https://www.mozilla.org/en-US/MPL/2.0/).
 The license is included in the LICENSE.txt
 
-# Installation
+# Installation and usage
 Read the USAGE.md file.
 
 # Main features
