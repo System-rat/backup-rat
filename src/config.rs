@@ -63,7 +63,14 @@ impl BackupTarget {
                 Additional::Network { .. } => unimplemented!(),
             }
         } else {
-            crate::operations::local_copy(self)
+            crate::operations::local_copy(
+                self.path,
+                self.target_path,
+                !self.always_copy,
+                self.keep_num,
+                self.ignore_files,
+                self.ignore_folders,
+            )
         }
     }
 }

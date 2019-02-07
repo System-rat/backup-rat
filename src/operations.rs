@@ -12,8 +12,6 @@ use std::path::PathBuf;
 
 use regex::Regex;
 
-use crate::config::BackupTarget;
-
 /// Checks if a directory or file is ignored
 ///
 /// # Parameters
@@ -73,20 +71,23 @@ pub fn ignored(
 /// # Error
 /// Returns an error if the target could not be written to or the *from* target could
 /// not be read
-pub fn local_copy(target: BackupTarget) -> Result<i32> {
+pub fn local_copy(
+    from: PathBuf,
+    to: PathBuf,
+    check_timestamp: bool,
+    keep_num: i32,
+    ignored_files: Vec<String>,
+    ignored_folders: Vec<String>,
+) -> Result<i32> {
     let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
-    let from = &target.path;
-    let to = &target.target_path;
-    let check_timestamp = if target.keep_num == 1 {
-        !target.always_copy
+    let check_timestamp = if keep_num == 1 {
+        check_timestamp
     } else {
         false
     };
-    let ignored_files = &target.ignore_files;
-    let ignored_folders = &target.ignore_folders;
     let mut num: i32 = 0;
-    let from_file: File = File::open(from)?;
-    if File::open(to).is_err() {
+    let from_file: File = File::open(&from)?;
+    if File::open(&to).is_err() {
         return Err(Error::new(
             ErrorKind::NotFound,
             "The destination is unavailable.",
@@ -96,14 +97,14 @@ pub fn local_copy(target: BackupTarget) -> Result<i32> {
     if from_file.metadata().unwrap().is_file() {
         if let Some(file_name) = from.file_name() {
             if ignored(
-                from,
+                &from,
                 &from_file.metadata().unwrap(),
-                ignored_files,
-                ignored_folders,
+                &ignored_files,
+                &ignored_folders,
             ) {
                 return Ok(0);
             }
-            if let Ok(to_file) = File::open(to.join(file_name)) {
+            if let Ok(to_file) = File::open(&to.join(file_name)) {
                 if check_timestamp
                     && from_file.metadata().unwrap().modified().unwrap()
                         < to_file.metadata().unwrap().modified().unwrap()
@@ -112,16 +113,16 @@ pub fn local_copy(target: BackupTarget) -> Result<i32> {
                 }
             }
             num += 1;
-            copy(from, to.join(file_name))?;
+            copy(&from, to.join(file_name))?;
         }
     } else {
         // the files and folders to be copied
         // this is better than using recursion in the case of stack overflows
         let mut copy_queue: Vec<(DirEntry, PathBuf)> = Vec::new();
-        for dir_entry in read_dir(from)? {
+        for dir_entry in read_dir(&from)? {
             if let Ok(dir_entry) = dir_entry {
                 let file_name = dir_entry.file_name();
-                if target.keep_num == 1 {
+                if keep_num == 1 {
                     copy_queue.push((
                         dir_entry,
                         to.join(from.file_name().unwrap()).join(file_name),
@@ -136,11 +137,11 @@ pub fn local_copy(target: BackupTarget) -> Result<i32> {
             }
         }
         // creates the target folder if it doesn't exist
-        if target.keep_num == 1 && File::open(to.join(from.file_name().unwrap())).is_err() {
+        if keep_num == 1 && File::open(to.join(from.file_name().unwrap())).is_err() {
             create_dir(to.join(from.file_name().unwrap()))?;
-        } else if target.keep_num > 1 {
+        } else if keep_num > 1 {
             create_dir(to.join(from.file_name().unwrap()).join(&now))?;
-            clear_old(&to.join(from.file_name().unwrap()), target.keep_num)
+            clear_old(&to.join(from.file_name().unwrap()), keep_num)
         }
 
         while !copy_queue.is_empty() {
@@ -165,13 +166,13 @@ pub fn local_copy(target: BackupTarget) -> Result<i32> {
                 }
             } else {
                 let entry_path = entry.0.path();
-                let striped_path = entry_path.strip_prefix(from);
+                let striped_path = entry_path.strip_prefix(&from);
                 if let Ok(striped_path) = striped_path {
                     if ignored(
                         &striped_path.to_path_buf(),
                         &info,
-                        ignored_files,
-                        ignored_folders,
+                        &ignored_files,
+                        &ignored_folders,
                     ) {
                         continue;
                     }
