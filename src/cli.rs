@@ -18,6 +18,16 @@ pub fn get_cli<'a, 'b>() -> App<'a, 'b> {
                 )
         )
         .subcommand(
+            SubCommand::with_name("restore")
+                .about("restoring operations")
+                .arg(
+                    Arg::with_name("TARGET")
+                        .help("The target to restore")
+                        .index(1)
+                        .required(true)
+                )
+        )
+        .subcommand(
             SubCommand::with_name("completion")
                 .about("generate shell completions")
                 .arg(

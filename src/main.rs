@@ -77,6 +77,22 @@ fn main() {
         }
     } else if let Some(options) = options.subcommand_matches("completion") {
         cli::print_completions(options.value_of("SHELL").unwrap().to_owned());
+    } else if let Some(options) = options.subcommand_matches("restore") {
+        let target_str = options.value_of("TARGET").unwrap();
+        for target in config.targets {
+            if let Some(tag) = &target.tag {
+                if tag == target_str {
+                    print!("Restoring target: {}... ", tag);
+                    flush();
+                    let res = target.restore();
+                    if let Ok(num) = res {
+                        println!("Done: {} files copied.", num);
+                    } else {
+                        println!(" Error: {}", res.unwrap_err());
+                    }
+                }
+            }
+        }
     }
 }
 

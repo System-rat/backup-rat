@@ -63,7 +63,12 @@ pub fn ignored(
 /// whilst also checking timestamps to override or not
 ///
 /// # Parameters
-/// - target: the SharedOptions from a Local target
+/// - from: The directory or file to be copied
+/// - to: Where the backup is to be created
+/// - check_timestamp: Wether to check if files have been modified
+/// - keep_num: The number of copies to keep (>1 disables timestamp checks)
+/// - ignored_files: Files to ignore
+/// - ignored_folders: Folders to ignore
 ///
 /// # Returns
 /// Returns an the number of copied files
@@ -193,6 +198,27 @@ pub fn local_copy(
     }
 
     Ok(num)
+}
+
+/// Restores a backup
+///
+/// # Parameters
+/// - from: The backup location
+/// - to: The original file or folder
+/// - is_multi: Are there multiple backups?
+///
+/// # Returns
+/// The number of files restored
+///
+/// # Error
+/// Returns an error if the target could not be written to or the *from* target could
+/// not be read
+pub fn restore_local(from: PathBuf, to: PathBuf, is_multi: bool) -> std::io::Result<i32> {
+    if is_multi {
+        unimplemented!()
+    } else {
+        local_copy(from, to, false, 1, Vec::new(), Vec::new())
+    }
 }
 
 /// Clears the oldest backups based on keep num

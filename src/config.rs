@@ -73,6 +73,20 @@ impl BackupTarget {
             )
         }
     }
+
+    pub fn restore(self) -> std::io::Result<i32> {
+        if let Some(ado) = self.additional_options {
+            match ado {
+                Additional::Network { .. } => unimplemented!(),
+            }
+        } else {
+            crate::operations::restore_local(
+                self.target_path.join(self.path.file_name().unwrap()),
+                self.path.parent().unwrap().to_path_buf(),
+                self.keep_num > 1,
+            )
+        }
+    }
 }
 
 // ***************
