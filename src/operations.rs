@@ -5,9 +5,9 @@
 //! Contains helper methods and structs for backup operations
 //! such as checking timestamps, copying to targets and restoring
 
-use std::fs::{copy, create_dir, read_dir, remove_dir_all};
+use std::fs::{copy, create_dir, create_dir_all, read_dir, remove_dir_all};
 use std::fs::{DirEntry, File, Metadata};
-use std::io::{Error, ErrorKind, Result};
+use std::io::{stdin, Error, ErrorKind, Result};
 use std::path::PathBuf;
 
 use regex::Regex;
@@ -145,7 +145,7 @@ pub fn local_copy(
         if keep_num == 1 && File::open(to.join(from.file_name().unwrap())).is_err() {
             create_dir(to.join(from.file_name().unwrap()))?;
         } else if keep_num > 1 {
-            create_dir(to.join(from.file_name().unwrap()).join(&now))?;
+            create_dir_all(to.join(from.file_name().unwrap()).join(&now))?;
             clear_old(&to.join(from.file_name().unwrap()), keep_num)
         }
 
@@ -215,7 +215,56 @@ pub fn local_copy(
 /// not be read
 pub fn restore_local(from: PathBuf, to: PathBuf, is_multi: bool) -> std::io::Result<i32> {
     if is_multi {
-        unimplemented!()
+        loop {
+            println!("What revision to restore (blank for latest): ");
+            let dirs: Vec<_> = read_dir(&from)?
+                .enumerate()
+                .map(|(num, dir)| {
+                    if let Ok(ref dir) = dir {
+                        println!("{}: {:?}", num + 1, dir.file_name());
+                    }
+                    dir
+                })
+                .collect();
+            let mut input = String::new();
+            stdin().read_line(&mut input)?;
+            if input.trim().is_empty() {
+                let mut max = std::ffi::OsString::new();
+                for dir in dirs {
+                    if let Ok(dir) = dir {
+                        if dir.file_name() > max {
+                            max = dir.file_name();
+                        }
+                    }
+                }
+                if max.len() != 0 {
+                    break local_copy(from.join(max), to, false, 1, Vec::new(), Vec::new());
+                } else {
+                    break Err(Error::new(ErrorKind::NotFound, "No revisions to restore."));
+                }
+            } else if let Ok(num) = input.trim().parse::<usize>() {
+                println!("Num: {}", num);
+                if num <= dirs.len() {
+                    break local_copy(
+                        from.join(match dirs[num - 1] {
+                            Ok(ref dir) => dir.file_name(),
+                            Err(_) => {
+                                return Err(Error::new(
+                                    ErrorKind::PermissionDenied,
+                                    "Could not read directory",
+                                ));
+                            }
+                        }),
+                        to,
+                        false,
+                        1,
+                        Vec::new(),
+                        Vec::new(),
+                    );
+                }
+            }
+            eprintln!("Invalid choice.");
+        }
     } else {
         local_copy(from, to, false, 1, Vec::new(), Vec::new())
     }
